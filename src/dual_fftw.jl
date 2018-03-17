@@ -16,24 +16,21 @@
 
 @inline numfloats(::Type{D}) where {D<:Dual} = div(sizeof(D), sizeof(floattype(D)))
 
-alignment_of(X::Array{Complex{D},Dim}) where {D<:Dual,Dim} = convert(Int32, convert(Int64, pointer(X)) % 16)
+# alignment_of(X::Array{Complex{D},Dim}) where {D<:Dual,Dim} = convert(Int32, convert(Int64, pointer(X)) % 16)
+alignment_of(X::Array{T,Dim}) where {T<:fftwReal,Dim} = convert(Int32, convert(Int64, pointer(X)) % 16)
 
 for (Tr,Tc,fftw,lib) in ((:Float64,:Complex128,"fftw",FFTW.libfftw),
                          (:Float32,:Complex64,"fftwf",FFTW.libfftwf))
-    @eval function Plan_DualFFTW(::Type{$Tr},
-        X::Array{Complex{D},Dim}, Y::Array{Complex{D},Dim},
+    @eval function Plan_DualFFTW(::Type{D},
+        x::Array{$Tr,Dim}, y::Array{$Tr,Dim},
         region, forward, flags::Unsigned, timelimit::Real,
-        bitreverse::Bool) where {D<:Dual,Dim}
-
-        x = CplxDualArray(X)
-        y = CplxDualArray(Y)
-        reg_shifted = [1.+region...]
+        bitreverse::Bool) where {D<:Dual,$Tr<:fftwReal,Dim}
 
         set_timelimit($Tr, timelimit)
-        dims, howmany = dims_howmany(x, y, [size(x)...], reg_shifted)
+        dims, howmany = dims_howmany(x, y, [size(x)...], region)
 
-        PXr = pointer(x.arr)
-        PYr = pointer(y.arr)
+        PXr = pointer(x)
+        PYr = pointer(y)
         PXi = PXr + numfloats(D)*sizeof($Tr)
         PYi = PYr + numfloats(D)*sizeof($Tr)
 
@@ -55,25 +52,34 @@ for (Tr,Tc,fftw,lib) in ((:Float64,:Complex128,"fftw",FFTW.libfftw),
         if plan == C_NULL
             error("FFTW could not create plan")
         end
-        set_timelimit($Tr, NO_TIMELIMIT)
 
-        return dualFFTWPlan{$Tr,forward,X===Y,Dim+1}(plan,flags,reg_shifted,x,y)
+        set_timelimit($Tr, NO_TIMELIMIT)
+        siz = (div(size(x,1),2), size(x)[2:Dim]...)
+        p = dualFFTWPlan{$Tr,forward,x===y,Dim}(plan,flags,region,siz,x,y)
+
+        return p
     end
 end
-function Plan_DualFFTW(X::Array{Complex{D},Dim}, Y::Array{Complex{D},Dim},
-                       region, forward) where {D<:Dual,Dim}
-    return Plan_DualFFTW(floattype(D), X, Y, region, forward, FFTW.ESTIMATE, FFTW.NO_TIMELIMIT, false)
+function Exec_DualFFTW!(X::Array{Complex{D},Dim}, Y::Array{Complex{D},Dim}, region, forward) where {D<:Dual,Dim}
+
+    Xsiz, Ysiz = size(X), size(Y)
+    X = reinterpret(floattype(D), X, (2*numfloats(D), Xsiz...))
+    Y = reinterpret(floattype(D), Y, (2*numfloats(D), Ysiz...))
+
+    p = Plan_DualFFTW(D, X, Y, region.+1, forward, FFTW.ESTIMATE, FFTW.NO_TIMELIMIT, false)
+    unsafe_execute!(p)
+
+    X = reinterpret(Complex{D}, X, Xsiz)
+    Y = reinterpret(Complex{D}, Y, Ysiz)
 end
 
-# -------------------------------------------------------- #
+# ------------------------------------------------------------ #
 # dual(b)fft for input X::Array{Complex{D},Dim}) where D<:Dual #
-# -------------------------------------------------------- #
+# ------------------------------------------------------------ #
 for (f,DIRECTION) in ((:dualfft,FFTW.FORWARD), (:dualbfft,FFTW.BACKWARD))
     f! = Symbol(f,"!")
-    @eval function $f!(Y::Array{Complex{D},Dim},
-                X::Array{Complex{D},Dim}, region) where {D<:Dual,Dim}
-        p = Plan_DualFFTW(X,Y,region,$DIRECTION)
-        unsafe_execute!(p)
+    @eval function $f!(Y::Array{Complex{D},Dim}, X::Array{Complex{D},Dim}, region) where {D<:Dual,Dim}
+        Exec_DualFFTW!(X,Y,region,$DIRECTION)
         return nothing
     end
     @eval function $f!(X::Array{Complex{D},Dim}, region) where {D<:Dual,Dim}

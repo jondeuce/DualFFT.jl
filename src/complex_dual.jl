@@ -29,85 +29,26 @@ const RealCplxDualOrder2 = Union{D,Complex{D}} where D<:Dual{T,V,N} where {T,V<:
 @inline numbases(::Type{D}) where {D<:Dual} = div(sizeof(D), sizeof(basetype(D)))
 @inline numbases(::Type{Complex{D}}) where {D<:Dual} = numbases(D)
 
-@generated function fill_dual!(A, d::U, i::Int, L::Int) where U <: RealCplxDual
-    return quote
-        N = $(npartials(U))
-        ix = i
-
-        A[ix] = value(d)
-        for j in 1:N
-            ix += L
-            A[ix] = partials(d,j)
-        end
-    end
-end
-
-@generated function fill_dual!(A, d::U, i::Int, L::Int) where U <: RealCplxDualOrder2
-    return quote
-        M = $(npartials(U))
-        N = $(npartials(valtype(U)))
-        ix = i
-
-        A[ix] = value(value(d))
-        for k in 1:N
-            ix += L
-            A[ix] = partials(value(d),k)
-        end
-
-        for j = 1:M
-            ix += L
-            A[ix] = value(partials(d,j))
-            for k in 1:N
-                ix += L
-                A[ix] = partials(d,j,k)
-            end
-        end
-    end
-end
-
-# @generated function getrealrowpartials(::Type{D}, arr, i) where D <: Dual
-#     ex = Expr(:tuple, [:(real(arr[i,$k+1])) for k=1:npartials(D)]...)
-#     return :(Partials($ex))
-# end
-#
-# @generated function getimagrowpartials(::Type{D}, arr, i) where D <: Dual
-#     ex = Expr(:tuple, [:(imag(arr[i,$k+1])) for k=1:npartials(D)]...)
-#     return :(Partials($ex))
-# end
-#
-# @generated function complexdualfromrow(::Type{D}, arr, i) where D <: Dual
-#     return :( complex( D(real(arr[i,1]),getrealrowpartials(D,arr,i)), D(imag(arr[i,1]),getimagrowpartials(D,arr,i)) ) )
-# end
-
 # ------------------------- #
 # dual2array and array2dual #
 # ------------------------- #
-dual2array_eltype(::Type{Complex{D}}) where D <: Dual = Complex{basetype(D)}
-dual2array_eltype(::Type{D}) where D <: Dual = basetype(D)
-dual2array_eltype(X::Array{U,Dim}) where {U,Dim} = dual2array_eltype(eltype(X))
-
-function dual2array(X::Array{U,Dim}) where {U<:RealCplxDual, Dim}
-    T = dual2array_eltype(X)
-    L = length(X)
-    N = numbases(U)
-    siz = (size(X)..., N)
-
-    a = Array{T}(siz)
-    for i in eachindex(X)
-        fill_dual!(a, X[i], i, L)
-    end
-
-    return a
+function dual2array(X::Array{D,Dim}) where {D<:Dual, Dim}
+    Y = reinterpret(basetype(D), X, (numbases(D), size(X)...))
+end
+function dual2array(X::Array{Complex{D},Dim}) where {D<:Dual, Dim}
+    Z = complex.(dual2array(real(X)), dual2array(imag(X)))
 end
 
-# function array2dual(X::Array{U,Dim}) where {U<:RealCplxDual, Dim}
-#
-# end
+function array2dual(::Type{D}, X::Array{T,Dim}) where {D<:Dual, T, Dim}
+    Y = reinterpret(D, X, size(X)[2:end])
+end
+function array2dual(::Type{Complex{D}}, X::Array{Complex{T},Dim}) where {D<:Dual, T, Dim}
+    Z = complex.(array2dual(D, real(X)), array2dual(D, imag(X)))
+end
 
 # ----------------------------------------------------- #
 # randn(Complex{D}) where partials of D are random, too #
 # ----------------------------------------------------- #
-
 @generated function randn_tuple(rng::AbstractRNG, ::Type{NTuple{N,V}}) where {N,V}
     return ForwardDiff.tupexpr(i -> :(randn(rng, V)), N)
 end

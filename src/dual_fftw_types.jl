@@ -6,16 +6,6 @@ const DUALBACK = false
 const INPLACE = true
 
 # ---------------------------------------------------------------------------- #
-# CplxDualArray: Dummy Array{Complex{Dual}} wrapper for convenience
-# ---------------------------------------------------------------------------- #
-immutable CplxDualArray{D, Dim} <: DenseArray{Complex{D}, Dim}
-    arr
-end
-CplxDualArray(X::Array{Complex{D}, Dim}) where {D<:Dual, Dim} = CplxDualArray{D, Dim+1}(X)
-Base.size(X::CplxDualArray{D,Dim}) where {D<:Dual,Dim} = (numbases(D), size(X.arr)...)
-strides(X::CplxDualArray{D,Dim}) where {D<:Dual,Dim} =  NTuple{Dim,Int}([1,2*numbases(D)*cumprod([1,size(X.arr)...])[1:end-1]...])
-
-# ---------------------------------------------------------------------------- #
 # DualPlan type (for AbstractFFTs interface)
 # ---------------------------------------------------------------------------- #
 mutable struct DualPlan{T,forward,inplace} <: Plan{T}
@@ -39,12 +29,10 @@ mutable struct dualFFTWPlan{T<:fftwReal,K,inplace,Dim} <: FFTWPlan{T,K,inplace}
     flags::UInt32 # planner flags
     region::Any # region (iterable) of dims that are transormed
     pinv::ScaledPlan
-    function dualFFTWPlan{T,K,inplace,Dim}(plan::PlanPtr,
-        flags::Integer, R::Any, x::CplxDualArray{D,Dim},
-        y::CplxDualArray{D,Dim}) where {T<:fftwReal,K,inplace,Dim,D<:Dual}
+    function dualFFTWPlan{T,K,inplace,Dim}(plan::PlanPtr, flags::Integer, R::Any, fftsiz::NTuple{Dim,Int}, x::Array{T,Dim}, y::Array{T,Dim}) where {T<:fftwReal,K,inplace,Dim}
 
-        p = new(plan, size(x), size(y), strides(x), strides(y),
-            alignment_of(x.arr), alignment_of(y.arr), flags, R)
+        p = new(plan, fftsiz, fftsiz, strides(x), strides(y),
+            alignment_of(x), alignment_of(y), flags, R)
 
         finalizer(p, destroy_plan)
         return p
