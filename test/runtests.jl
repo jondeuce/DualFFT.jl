@@ -3,6 +3,55 @@ using ForwardDiff: Dual, Partials, value, partials, order, npartials, tagtype, v
 using Base.Test
 using BenchmarkTools
 
+# ---------------------------------------------------------------------------- #
+# Test (i,b)fft for first and second order duals
+# ---------------------------------------------------------------------------- #
+D  = Dual{Void, Float64, 3} # First order dual type
+D2 = Dual{Void, D, 7} # Second order dual type
+D3 = Dual{Void, D2, 5} # Third order dual type
+
+for zdims in ((7,), (11,21), (13,19,31))
+    for dualtype in (D, D2)
+        z = randn(Complex{dualtype}, zdims)
+        Z = dual2array(z);
+        dims = 1:(ndims(Z)-1)
+
+        @test dual2array(fft(z))  ≈ fft(Z,dims)
+        @test dual2array(bfft(z)) ≈ bfft(Z,dims)
+        @test dual2array(ifft(z)) ≈ ifft(Z,dims)
+
+        @test (w = z; W = Z; fft!(w);  fft!(W,dims);  dual2array(w) ≈ W)
+        @test (w = z; W = Z; bfft!(w); bfft!(W,dims); dual2array(w) ≈ W)
+        @test (w = z; W = Z; ifft!(w); ifft!(W,dims); dual2array(w) ≈ W)
+    end
+end
+
+# ---------------------------------------------------------------------------- #
+# Timing Tests
+# ---------------------------------------------------------------------------- #
+N = 3
+D = Dual{Void, Float64, N}
+# zdims = (19,11)
+# zdims = (1024,1024)
+zdims = (128,128,128)
+
+z = randn(Complex{D}, zdims)
+dims = 1:ndims(z)
+psiz = circshift(1:(ndims(z)+1),1)
+pdims = 2:(ndims(z)+1)
+
+# Time fft for in-place dual fft
+@btime fft!($z) # z acts like (N+1 x zdims) array; fft is along 2:ndims(z)+1
+
+# Time fft of first converting to array (with convert time)
+@btime (Z = dual2array($z); fft!(Z,$dims)) # Z is (zdims x N+1)
+@btime (Z = permutedims(dual2array($z),$psiz); fft!(Z,$pdims)) # Z is (N+1 x zdims)
+
+# Time fft of first converting to array (without convert time)
+Z = dual2array(z); # Z is (zdims x N+1)
+@btime fft!($Z,$dims)
+Z = permutedims(Z,psiz) # Z is (N+1 x zdims)
+@btime fft!($Z,$pdims)
 
 # ---------------------------------------------------------------------------- #
 # Test the gradient and hessian of a test function which calls FFTW
@@ -79,53 +128,3 @@ using BenchmarkTools
 #     end
 # end
 # main()
-
-# ---------------------------------------------------------------------------- #
-# Test (i,b)fft for first and second order duals
-# ---------------------------------------------------------------------------- #
-D  = Dual{Void, Float64, 3} # First order dual type
-D2 = Dual{Void, D, 7} # Second order dual type
-D3 = Dual{Void, D2, 5} # Third order dual type
-
-for zdims in ( (7,), (11,21), (13,19,31) )
-    for dualtype in ( D, D2 )
-        z = randn(Complex{dualtype}, zdims)
-        Z = dual2array(z);
-        dims = 1:(ndims(Z)-1)
-
-        @test dual2array(fft(z))  ≈ fft(Z,dims)
-        @test dual2array(bfft(z)) ≈ bfft(Z,dims)
-        @test dual2array(ifft(z)) ≈ ifft(Z,dims)
-
-        @test (w = z; W = Z; fft!(w);  fft!(W,dims);  dual2array(w) ≈ W)
-        @test (w = z; W = Z; bfft!(w); bfft!(W,dims); dual2array(w) ≈ W)
-        @test (w = z; W = Z; ifft!(w); ifft!(W,dims); dual2array(w) ≈ W)
-    end
-end
-
-# ---------------------------------------------------------------------------- #
-# Timing Tests
-# ---------------------------------------------------------------------------- #
-N = 3
-D = Dual{Void, Float64, N}
-# zdims = (19,11)
-# zdims = (1024,1024)
-zdims = (128,128,128)
-
-z = randn(Complex{D}, zdims)
-dims = 1:ndims(z)
-psiz = circshift(1:(ndims(z)+1),1)
-pdims = 2:(ndims(z)+1)
-
-# Time fft for in-place dual fft
-@btime fft!($z) # z acts like (N+1 x zdims) array; fft is along 2:ndims(z)+1
-
-# Time fft of first converting to array (with convert time)
-@btime (Z = dual2array($z); fft!(Z,$dims)) # Z is (zdims x N+1)
-@btime (Z = permutedims(dual2array($z),$psiz); fft!(Z,$pdims)) # Z is (N+1 x zdims)
-
-# Time fft of first converting to array (without convert time)
-Z = dual2array(z); # Z is (zdims x N+1)
-@btime fft!($Z,$dims)
-Z = permutedims(Z,psiz) # Z is (N+1 x zdims)
-@btime fft!($Z,$pdims)

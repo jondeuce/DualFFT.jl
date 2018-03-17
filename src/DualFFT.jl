@@ -22,5 +22,6 @@ include("dual_fftw.jl")
 # include("dualfftw.jl")
 
 # ---- Exported functions ---- #
+export fft
 
 end # module
