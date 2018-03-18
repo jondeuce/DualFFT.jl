@@ -7,23 +7,51 @@ using BenchmarkTools
 # Test (i,b)fft for first and second order duals
 # ---------------------------------------------------------------------------- #
 D  = Dual{Void, Float64, 2} # First order dual type
-D2 = Dual{Void, D, 3} # Second order dual type
-D3 = Dual{Void, D2, 5} # Third order dual type
+D2 = Dual{Void, D, 4} # Second order dual type
+D3 = Dual{Void, D2, 3} # Third order dual type
+D4 = Dual{Void, D3, 1} # Fourth order dual type
 
-for zdims in ((7,), (11,21), (13,19,31))
-    for dualtype in (D, D2, D3)
-        z = randn(Complex{dualtype}, zdims)
-        Z = dual2array(z);
-        dims = 2:ndims(Z)
+for zdims in ((3,), (5,2), (6,7,5), (7,3,5,8))
+zdim = length(zdims)
+for zreg in (1, 1:zdim, min(2,zdim):zdim, 1:2:zdim)
+for dualtype in (D, D2, D3, D4)
+    z = randn(Complex{dualtype}, zdims)
+    Z = dual2array(z);
+    Zreg = zreg.+1
 
-        @test dual2array(fft(z))  ≈ fft(Z,dims)
-        @test dual2array(bfft(z)) ≈ bfft(Z,dims)
-        @test dual2array(ifft(z)) ≈ ifft(Z,dims)
+    @test dual2array(fft(z,zreg))  ≈ fft(Z,Zreg)
+    @test dual2array(ifft(z,zreg)) ≈ ifft(Z,Zreg)
+    @test dual2array(bfft(z,zreg)) ≈ bfft(Z,Zreg)
 
-        @test (w = z; W = Z; fft!(w);  fft!(W,dims);  dual2array(w) ≈ W)
-        @test (w = z; W = Z; bfft!(w); bfft!(W,dims); dual2array(w) ≈ W)
-        @test (w = z; W = Z; ifft!(w); ifft!(W,dims); dual2array(w) ≈ W)
-    end
+    @test (fft!(z,zreg);  fft!(Z,Zreg);  dual2array(z) ≈ Z)
+    @test (ifft!(z,zreg); ifft!(Z,Zreg); dual2array(z) ≈ Z)
+    @test (bfft!(z,zreg); bfft!(Z,Zreg); dual2array(z) ≈ Z)
+
+    pf = plan_fft(z,zreg); pb = plan_bfft(z,zreg); pi = plan_ifft(z,zreg)
+    Pf = plan_fft(Z,Zreg); Pb = plan_bfft(Z,Zreg); Pi = plan_ifft(Z,Zreg)
+
+    @test dual2array(pf*z) ≈ Pf*Z
+    @test dual2array(pb*z) ≈ Pb*Z
+    @test dual2array(pi*z) ≈ Pi*Z
+    @test dual2array(pf\z) ≈ Pf\Z
+    @test dual2array(pb\z) ≈ Pb\Z
+    @test dual2array(pi\z) ≈ Pi\Z
+
+    @test (w=similar(z); W = similar(Z); A_mul_B!(w,pf,z); A_mul_B!(W,Pf,Z); dual2array(w) ≈ W)
+    @test (w=similar(z); W = similar(Z); A_mul_B!(w,pb,z); A_mul_B!(W,Pb,Z); dual2array(w) ≈ W)
+    @test (w=similar(z); W = similar(Z); A_mul_B!(w,pi,z); A_mul_B!(W,Pi,Z); dual2array(w) ≈ W)
+
+    pf = plan_fft!(z,zreg); pb = plan_bfft!(z,zreg); pi = plan_ifft!(z,zreg)
+    Pf = plan_fft!(Z,Zreg); Pb = plan_bfft!(Z,Zreg); Pi = plan_ifft!(Z,Zreg)
+
+    @test dual2array(pf*z) ≈ Pf*Z
+    @test dual2array(pb*z) ≈ Pb*Z
+    @test dual2array(pi*z) ≈ Pi*Z
+    @test dual2array(pf\z) ≈ Pf\Z
+    @test dual2array(pb\z) ≈ Pb\Z
+    @test dual2array(pi\z) ≈ Pi\Z
+end
+end
 end
 
 # ---------------------------------------------------------------------------- #
