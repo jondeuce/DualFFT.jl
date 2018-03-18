@@ -27,7 +27,10 @@ for (Tr,Tc,fftw,lib) in ((:Float64,:Complex128,"fftw",FFTW.libfftw),
         bitreverse::Bool) where {D<:Dual,$Tr<:fftwReal,Dim}
 
         set_timelimit($Tr, timelimit)
-        dims, howmany = dims_howmany(x, y, [size(x)...], region)
+
+        # siz = (numfloats(D), size(x)[2:Dim]...)
+        siz = size(x)
+        dims, howmany = dims_howmany(x, y, [siz...], region)
 
         PXr = pointer(x)
         PYr = pointer(y)
@@ -54,14 +57,12 @@ for (Tr,Tc,fftw,lib) in ((:Float64,:Complex128,"fftw",FFTW.libfftw),
         end
 
         set_timelimit($Tr, NO_TIMELIMIT)
-        siz = (div(size(x,1),2), size(x)[2:Dim]...)
         p = dualFFTWPlan{$Tr,forward,x===y,Dim}(plan,flags,region,siz,x,y)
 
         return p
     end
 end
 function Exec_DualFFTW!(X::Array{Complex{D},Dim}, Y::Array{Complex{D},Dim}, region, forward) where {D<:Dual,Dim}
-
     Xsiz, Ysiz = size(X), size(Y)
     X = reinterpret(floattype(D), X, (2*numfloats(D), Xsiz...))
     Y = reinterpret(floattype(D), Y, (2*numfloats(D), Ysiz...))
