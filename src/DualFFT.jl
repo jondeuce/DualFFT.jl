@@ -16,8 +16,7 @@ import Base.DFT: normalization, complexfloat, strides
 
 # ---- Source files ---- #
 include("complex_dual.jl")
-include("dual_fftw_types.jl")
-include("dual_fftw.jl")
+include("dual_fft.jl")
 
 # ---- Exported functions ---- #
 # export fft

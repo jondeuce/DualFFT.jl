@@ -33,17 +33,27 @@ const RealCplxDualOrder2 = Union{D,Complex{D}} where D<:Dual{T,V,N} where {T,V<:
 # dual2array and array2dual #
 # ------------------------- #
 function dual2array(X::Array{D,Dim}) where {D<:Dual, Dim}
-    Y = reinterpret(basetype(D), X, (numbases(D), size(X)...))
+    X = reinterpret(basetype(D), X, (numbases(D), size(X)...))
+    Y = copy(X)
+    return Y
 end
 function dual2array(X::Array{Complex{D},Dim}) where {D<:Dual, Dim}
-    Z = complex.(dual2array(real(X)), dual2array(imag(X)))
+    Xr = reinterpret(basetype(D), real(X), (numbases(D), size(X)...))
+    Xi = reinterpret(basetype(D), imag(X), (numbases(D), size(X)...))
+    Z = complex.(Xr, Xi)
+    return Z
 end
 
 function array2dual(::Type{D}, X::Array{T,Dim}) where {D<:Dual, T, Dim}
-    Y = reinterpret(D, X, size(X)[2:end])
+    X = reinterpret(D, X, size(X)[2:end])
+    Y = copy(X)
+    return Y
 end
 function array2dual(::Type{Complex{D}}, X::Array{Complex{T},Dim}) where {D<:Dual, T, Dim}
-    Z = complex.(array2dual(D, real(X)), array2dual(D, imag(X)))
+    Xr = reinterpret(D, real(X), size(X)[2:end])
+    Xi = reinterpret(D, imag(X), size(X)[2:end])
+    Z = complex.(Xr, Xi)
+    return Z
 end
 
 # ----------------------------------------------------- #
