@@ -22,14 +22,16 @@ alignment_of(X::Array{T,Dim}) where {T<:fftwReal,Dim} = convert(Int32, convert(I
 for (Tr,Tc,fftw,lib) in ((:Float64,:Complex128,"fftw",FFTW.libfftw),
                          (:Float32,:Complex64,"fftwf",FFTW.libfftwf))
     @eval function Plan_DualFFTW(::Type{D},
-        x::Array{$Tr,Dim}, y::Array{$Tr,Dim},
+        x::Array{$Tr,Dim}, y::Array{$Tr,Dim}, xsiz, ysiz,
         region, forward, flags::Unsigned, timelimit::Real,
         bitreverse::Bool) where {D<:Dual,$Tr<:fftwReal,Dim}
 
         set_timelimit($Tr, timelimit)
 
-        # siz = (numfloats(D), size(x)[2:Dim]...)
-        siz = size(x)
+        # Base.size(X::CplxDualArray{D,Dim}) where {D<:Dual,Dim} = (numbases(D), size(X.arr)...)
+        # strides(X::CplxDualArray{D,Dim}) where {D<:Dual,Dim} =  NTuple{Dim,Int}([1,2*numbases(D)*cumprod([1,size(X.arr)...])[1:end-1]...])
+
+        siz = (numfloats(D), xsiz...)
         dims, howmany = dims_howmany(x, y, [siz...], region)
 
         PXr = pointer(x)
@@ -67,7 +69,7 @@ function Exec_DualFFTW!(X::Array{Complex{D},Dim}, Y::Array{Complex{D},Dim}, regi
     X = reinterpret(floattype(D), X, (2*numfloats(D), Xsiz...))
     Y = reinterpret(floattype(D), Y, (2*numfloats(D), Ysiz...))
 
-    p = Plan_DualFFTW(D, X, Y, region.+1, forward, FFTW.ESTIMATE, FFTW.NO_TIMELIMIT, false)
+    p = Plan_DualFFTW(D, X, Y, Xsiz, Ysiz, region.+1, forward, FFTW.ESTIMATE, FFTW.NO_TIMELIMIT, false)
     unsafe_execute!(p)
 
     X = reinterpret(Complex{D}, X, Xsiz)
