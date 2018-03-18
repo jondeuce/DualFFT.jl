@@ -1,13 +1,12 @@
 __precompile__(true)
 module DualFFT
 
-# ---- Import packages ---- #
+# ---- Imported packages ---- #
 using AbstractFFTs, ForwardDiff, Base.FFTW
-
 using ForwardDiff: Dual, Partials
 using AbstractFFTs: Plan, ScaledPlan
 
-# ---- Imported base functions directly ---- #
+# ---- Imported base functions ---- #
 import ForwardDiff: value, partials, npartials, valtype, tagtype
 import AbstractFFTs: plan_fft, plan_inv, plan_bfft
 import Base: A_mul_B!, *
@@ -20,6 +19,6 @@ include("abstract_dual_fft.jl")
 include("dual_fft.jl")
 
 # ---- Exported functions ---- #
-# export fft
+export dual2array, array2dual
 
 end # module
