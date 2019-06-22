@@ -10,8 +10,8 @@ using AbstractFFTs: Plan, ScaledPlan
 import ForwardDiff: value, partials, npartials, valtype, tagtype
 import AbstractFFTs: plan_fft, plan_inv, plan_bfft
 import Base: A_mul_B!, *
-import Base.FFTW: set_timelimit, dims_howmany, unsafe_execute!, cFFTWPlan, r2rFFTWPlan, PlanPtr, FFTWPlan, ScaledPlan, destroy_plan
-import Base.DFT: normalization, complexfloat, strides
+import FFTW: set_timelimit, dims_howmany, unsafe_execute!, cFFTWPlan, r2rFFTWPlan, PlanPtr, FFTWPlan, ScaledPlan, destroy_plan
+import AbstractFFTs: normalization, complexfloat, strides
 
 # ---- Source files ---- #
 include("complex_dual.jl")
