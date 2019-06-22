@@ -24,4 +24,4 @@ include("dual_fft.jl")
 # ---- Exported functions ---- #
 export dual2array, array2dual
 
-end # module
+end
