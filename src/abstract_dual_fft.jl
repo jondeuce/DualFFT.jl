@@ -25,8 +25,8 @@ AbstractFFTs.plan_bfft!(Z::Array{Complex{D}}, region=1:ndims(Z); kwargs...) wher
 AbstractFFTs.plan_inv(p::DualPlan{Complex{D},forward,inplace}) where {D<:Dual,forward,inplace} = ScaledPlan(DualPlan{Complex{D},!forward,inplace}(p.region,p.msize),
            normalization(basetype(D), p.msize, p.region))
 
-Base.A_mul_B!(Y::Array{Complex{D}}, p::DualPlan{Complex{D},DUALFORW,inplace}, X::Array{Complex{D}}) where {D<:Dual,inplace} = (copy!(Y,X); dualfft!(Y,p.region); return Y)
-Base.A_mul_B!(Y::Array{Complex{D}}, p::DualPlan{Complex{D},DUALBACK,inplace}, X::Array{Complex{D}}) where {D<:Dual,inplace} = (copy!(Y,X); dualbfft!(Y,p.region); return Y)
+LinearAlgebra.mul!(Y::Array{Complex{D}}, p::DualPlan{Complex{D},DUALFORW,inplace}, X::Array{Complex{D}}) where {D<:Dual,inplace} = (copy!(Y,X); dualfft!(Y,p.region); return Y)
+LinearAlgebra.mul!(Y::Array{Complex{D}}, p::DualPlan{Complex{D},DUALBACK,inplace}, X::Array{Complex{D}}) where {D<:Dual,inplace} = (copy!(Y,X); dualbfft!(Y,p.region); return Y)
 
 Base.:*(p::DualPlan{Complex{D},DUALFORW,!INPLACE}, X::Array{Complex{D}}) where D <: Dual = dualfft(X,p.region)
 Base.:*(p::DualPlan{Complex{D},DUALFORW,INPLACE}, X::Array{Complex{D}}) where D <: Dual = (dualfft!(X,p.region); return X)

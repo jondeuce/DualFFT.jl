@@ -5,11 +5,14 @@ module DualFFT
 using AbstractFFTs, ForwardDiff
 using ForwardDiff: Dual, Partials
 using AbstractFFTs: Plan, ScaledPlan
+import LinearAlgebra
+import FFTW
 
 # ---- Imported base functions ---- #
 import ForwardDiff: value, partials, npartials, valtype, tagtype
 import AbstractFFTs: plan_fft, plan_inv, plan_bfft
-import Base: A_mul_B!, *
+import Base: *
+import LinearAlgebra.mul!
 import FFTW: set_timelimit, dims_howmany, unsafe_execute!, cFFTWPlan, r2rFFTWPlan, PlanPtr, FFTWPlan, ScaledPlan, destroy_plan
 import AbstractFFTs: normalization, complexfloat, strides
 import Random

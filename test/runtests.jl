@@ -1,6 +1,8 @@
+module TestDualFFT
+
 using DualFFT: dual2array, array2dual, valtype, partials, npartials
 using ForwardDiff: Dual, Partials, value, partials, order, npartials, valtype
-using Base.Test
+using Test: @test
 using BenchmarkTools
 
 # ---------------------------------------------------------------------------- #
@@ -156,3 +158,4 @@ end
 #     end
 # end
 # main()
+end
