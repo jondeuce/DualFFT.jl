@@ -59,7 +59,7 @@ end
 # ----------------------------------------------------- #
 # randn(Complex{D}) where partials of D are random, too #
 # ----------------------------------------------------- #
-@generated function randn_tuple(rng::AbstractRNG, ::Type{NTuple{N,V}}) where {N,V}
+@generated function randn_tuple(rng::Random.AbstractRNG, ::Type{NTuple{N,V}}) where {N,V}
     return ForwardDiff.tupexpr(i -> :(randn(rng, V)), N)
 end
 
@@ -70,17 +70,17 @@ end
 # randn(::Partials)
 @inline Base.randn(partials::Partials) = randn(typeof(partials))
 @inline Base.randn(::Type{Partials{N,V}}) where {N,V} = Partials{N,V}(randn_tuple(NTuple{N,V}))
-@inline Base.randn(rng::AbstractRNG, partials::Partials) = randn(rng, typeof(partials))
-@inline Base.randn(rng::AbstractRNG, ::Type{Partials{N,V}}) where {N,V} = Partials{N,V}(randn_tuple(rng, NTuple{N,V}))
+@inline Base.randn(rng::Random.AbstractRNG, partials::Partials) = randn(rng, typeof(partials))
+@inline Base.randn(rng::Random.AbstractRNG, ::Type{Partials{N,V}}) where {N,V} = Partials{N,V}(randn_tuple(rng, NTuple{N,V}))
 
 # randn(::Dual)
 @inline Base.randn(d::Dual) = randn(typeof(d))
 @inline Base.randn(::Type{Dual{T,V,N}}) where {T,V,N} = Dual{T}(randn(V), randn(Partials{N,V}))
-@inline Base.randn(rng::AbstractRNG, d::Dual) = randn(rng, typeof(d))
-@inline Base.randn(rng::AbstractRNG, ::Type{Dual{T,V,N}}) where {T,V,N} = Dual{T}(randn(rng, V), randn(Partials{N,V}))
+@inline Base.randn(rng::Random.AbstractRNG, d::Dual) = randn(rng, typeof(d))
+@inline Base.randn(rng::Random.AbstractRNG, ::Type{Dual{T,V,N}}) where {T,V,N} = Dual{T}(randn(rng, V), randn(Partials{N,V}))
 
 # randn(::Complex{Dual})
 @inline Base.randn(d::Complex{D}) where D <: Dual = randn(typeof(d))
 @inline Base.randn(::Type{Complex{D}}) where D <: Dual = Complex(randn(D), randn(D))
-@inline Base.randn(rng::AbstractRNG, d::Complex{D}) where D <: Dual = randn(rng, typeof(d))
-@inline Base.randn(rng::AbstractRNG, ::Type{Complex{D}}) where D <: Dual = Complex(randn(rng, D), randn(rng, D))
+@inline Base.randn(rng::Random.AbstractRNG, d::Complex{D}) where D <: Dual = randn(rng, typeof(d))
+@inline Base.randn(rng::Random.AbstractRNG, ::Type{Complex{D}}) where D <: Dual = Complex(randn(rng, D), randn(rng, D))

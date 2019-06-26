@@ -1,15 +1,18 @@
+module TestDualFFT
+
 using DualFFT: dual2array, array2dual, valtype, partials, npartials
 using ForwardDiff: Dual, Partials, value, partials, order, npartials, valtype
-using Base.Test
-using BenchmarkTools
+using Test: @test
+using Base: Nothing
+#using BenchmarkTools
 
 # ---------------------------------------------------------------------------- #
 # Test (i,b)fft for first and second order duals
 # ---------------------------------------------------------------------------- #
-D  = Dual{Void, Float64, 2} # First order dual type
-D2 = Dual{Void, D, 4} # Second order dual type
-D3 = Dual{Void, D2, 3} # Third order dual type
-D4 = Dual{Void, D3, 1} # Fourth order dual type
+D  = Dual{Nothing, Float64, 2} # First order dual type
+D2 = Dual{Nothing, D, 4} # Second order dual type
+D3 = Dual{Nothing, D2, 3} # Third order dual type
+D4 = Dual{Nothing, D3, 1} # Fourth order dual type
 
 for zdims in ((3,), (5,2), (6,7,5), (7,3,5,8))
 zdim = length(zdims)
@@ -156,3 +159,4 @@ end
 #     end
 # end
 # main()
+end
